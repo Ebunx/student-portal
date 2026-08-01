@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Student Portal - Academic Information System
 
-## Getting Started
+A complete, production-ready, portfolio-quality Student Portal built with Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Prisma, and NextAuth.js (Auth.js). Designed for dual-role authorization (Student and Admin) with modern glassmorphic aesthetics, responsive mobile interfaces, and clean database integrations.
 
-First, run the development server:
+## Tech Stack
+- **Framework**: Next.js 16 (App Router) & React 19
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4 & Lucide Icons & Framer Motion
+- **Database ORM**: Prisma ORM
+- **Database Engine**: PostgreSQL (SQLite configured for local development and build testing)
+- **Authentication**: NextAuth.js / Auth.js (Credentials Provider with hashed passwords)
+- **Data Charts**: Recharts
 
+---
+
+## Role Features
+
+### 1. Student Features
+- **Dashboard**: Card overviews for dynamic CGPA calculations, Semester GPAs, registrations count, and announcements feeds.
+- **Profile**: Academic enrollment dossier display featuring passport photo integration.
+- **Course Registration**: Dynamic checklist for registering courses with real-time tally of selected units (max credit limit check of 24 units), duplicate registrations check, slip prints, and edit selections.
+- **Results & Transcript**: Select session and semester terms, calculate Semester GPA and overall Cumulative GPA, print registration cards, and download slips.
+- **Mock Payments Ledger**: Invoice statements tracker for School Fees, Acceptance Fees, and Medical Clearances. Settling payments mock processes invoices and marks them as "Paid".
+- **Announcements Bulletins**: Bulletins feed for registry broadcasts.
+
+### 2. Admin Features
+- **Dashboard & Analytics**: Analytics counters (Enrolled Students, Registration Counts, Unpaid Invoices, Average CGPA) and visual graphs displaying GPA spreads and enrollment levels.
+- **Manage Students (CRUD)**: Enroll new students (hashes passwords, creates mock billing invoices), modify student dossiers, and delete accounts. Includes live searches and filter filters.
+- **Manage Courses (CRUD)**: Create courses, update credit weights and requirements, allocate to academic levels/semesters, and delete course listings.
+- **Upload Grades (CRUD)**: Record course grades for students. Standardized rules automatically calculate letter grades (A-F) and remarks (PASS/FAIL) from numerical scores.
+- **Manage Announcements (CRUD)**: Publish announcements to the student dashboard or archive outdated bulletins.
+
+---
+
+## Local Setup & Installation
+
+### 1. Clone Project
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Ebunx/student-portal.git
+cd student-portal
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install Dependencies
+```bash
+npm install --legacy-peer-deps
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Setup Environment Variables
+Copy `.env.example` to `.env` and fill the variables:
+```bash
+cp .env.example .env
+```
+Make sure `NEXTAUTH_SECRET` and `AUTH_SECRET` are set. For local runs:
+```env
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_SECRET="3b9a7c36a43878b27cf1859c6b73a70295837ff4d46ea389ce0d268d0e729a43"
+AUTH_SECRET="3b9a7c36a43878b27cf1859c6b73a70295837ff4d46ea389ce0d268d0e729a43"
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Create and Seed Local Database
+Push the schema to your local SQLite database:
+```bash
+npx prisma db push
+```
+Populate the database with seeded mock data:
+```bash
+npx prisma db seed
+```
 
-## Learn More
+### 5. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) on your browser.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Demo Credentials (Seeded Records)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Student Accounts (20 Seeded)
+- **Username / Matric**: `STA/2023/001` (up to `STA/2023/020`)
+- **Password**: `StudentPass123!`
 
-## Deploy on Vercel
+### Administrator Account (1 Seeded)
+- **Username / Email**: `admin@portal.com`
+- **Password**: `AdminPass123!`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## PostgreSQL (Supabase) Production Migration
+
+To migrate from SQLite to PostgreSQL (Supabase or other host) for production:
+
+1. **Update Connection String**: Paste your Supabase connection string in your `.env`:
+   ```env
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@db.YOUR_SUPABASE.supabase.co:5432/postgres?schema=public"
+   ```
+2. **Switch Schema Provider**: In [prisma/schema.prisma](file:///prisma/schema.prisma), update the datasource block:
+   ```prisma
+   datasource db {
+     provider = "postgresql"
+     url      = env("DATABASE_URL")
+   }
+   ```
+3. **Re-Generate Client & Run Migrations**:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+   ```
+4. Deploy the project to Vercel. Ensure all variables are configured in Vercel settings!

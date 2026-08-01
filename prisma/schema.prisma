@@ -1,0 +1,104 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  matricNumber String   @id
+  password     String
+  name         String
+  email        String   @unique
+  phone        String
+  department   String
+  faculty      String
+  level        Int      // 100, 200, 300, 400, etc.
+  session      String   // e.g. "2023/2024"
+  passportUrl  String   @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop")
+  role         String   @default("STUDENT")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  registrations Registration[]
+  results       Result[]
+  payments      Payment[]
+}
+
+model Course {
+  code      String   @id // e.g. "MTH101"
+  title     String
+  unit      Int
+  status    String   // "CORE" | "ELECTIVE"
+  level     Int      // 100, 200, 300, etc.
+  semester  Int      // 1 | 2 (First / Second)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+  results       Result[]
+}
+
+model Registration {
+  id            String   @id @default(uuid())
+  studentMatric String
+  courseCode    String
+  semester      Int      // 1 | 2
+  session       String   // e.g. "2023/2024"
+  createdAt     DateTime @default(now())
+
+  student Student @relation(fields: [studentMatric], references: [matricNumber], onDelete: Cascade)
+  course  Course  @relation(fields: [courseCode], references: [code], onDelete: Cascade)
+
+  @@unique([studentMatric, courseCode, semester, session])
+}
+
+model Result {
+  id            String   @id @default(uuid())
+  studentMatric String
+  courseCode    String
+  score         Int
+  grade         String   // A, B, C, D, E, F
+  remark        String   // PASS, FAIL, etc.
+  semester      Int      // 1 | 2
+  session       String   // e.g. "2023/2024"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student Student @relation(fields: [studentMatric], references: [matricNumber], onDelete: Cascade)
+  course  Course  @relation(fields: [courseCode], references: [code], onDelete: Cascade)
+
+  @@unique([studentMatric, courseCode, semester, session])
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  studentMatric String
+  title         String   // "School Fees" | "Acceptance Fee" | "Medical Fee"
+  amount        Float
+  status        String   // "Paid" | "Pending"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student Student @relation(fields: [studentMatric], references: [matricNumber], onDelete: Cascade)
+}
