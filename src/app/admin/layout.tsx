@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import AdminLayoutClient from "@/components/AdminLayoutClient";
 
@@ -7,15 +7,15 @@ interface LayoutProps {
 }
 
 export default async function AdminLayout({ children }: LayoutProps) {
-  const session = await auth();
+  const session = await getSession();
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || session.role !== "ADMIN") {
     redirect("/login/admin");
   }
 
   const userForLayout = {
-    name: session.user.name || "Administrator",
-    email: session.user.email || "",
+    name: session.name || "Administrator",
+    email: session.email || "",
   };
 
   return (

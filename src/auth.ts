@@ -1,84 +1,19 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { authConfig } from "./auth.config";
-import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { getSession } from "@/lib/session";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-        role: { label: "Role", type: "text" },
-      },
-      async authorize(credentials) {
-        // Safely parse credentials
-        const parsedCredentials = z
-          .object({
-            username: z.string(),
-            password: z.string(),
-            role: z.string().optional(),
-          })
-          .safeParse(credentials);
+// Custom wrapper to keep all existing pages compatible without modification
+export async function auth() {
+  const session = await getSession();
+  if (!session) return null;
+  return {
+    user: session,
+  };
+}
 
-        if (!parsedCredentials.success) {
-          return null;
-        }
+// Dummy handler exports for compatibility if needed, or to be safe
+export const handlers = {
+  GET: async () => new Response("Auth endpoint inactive"),
+  POST: async () => new Response("Auth endpoint inactive"),
+};
 
-        const { username, password } = parsedCredentials.data;
-        
-        // Auto-detect role based on input format (email vs matric number) as a robust fallback
-        let detectedRole = parsedCredentials.data.role;
-        if (!detectedRole) {
-          detectedRole = username.includes("@") ? "ADMIN" : "STUDENT";
-        }
-
-        if (detectedRole === "ADMIN") {
-          const admin = await db.admin.findUnique({
-            where: { email: username.toLowerCase().trim() },
-          });
-
-          if (!admin) return null;
-
-          const passwordsMatch = await bcrypt.compare(password, admin.password);
-          if (passwordsMatch) {
-            return {
-              id: admin.id,
-              name: admin.name,
-              email: admin.email,
-              role: "ADMIN",
-            };
-          }
-        } else {
-          // Student login
-          const student = await db.student.findUnique({
-            where: { matricNumber: username.toUpperCase().trim() },
-          });
-
-          if (!student) return null;
-
-          const passwordsMatch = await bcrypt.compare(password, student.password);
-          if (passwordsMatch) {
-            return {
-              id: student.matricNumber, // using matric number as id
-              matricNumber: student.matricNumber,
-              name: student.name,
-              email: student.email,
-              phone: student.phone,
-              department: student.department,
-              faculty: student.faculty,
-              level: student.level,
-              session: student.session,
-              role: "STUDENT",
-            };
-          }
-        }
-
-        return null;
-      },
-    }),
-  ],
-});
+export async function signIn() {}
+export async function signOut() {}

@@ -1,45 +1,89 @@
 "use server";
 
-import { signIn, signOut } from "@/auth";
-import { AuthError } from "next-auth";
+import { db } from "@/lib/db";
+import { setSession, deleteSession } from "@/lib/session";
+import bcrypt from "bcryptjs";
+import { redirect } from "next/navigation";
 
 export async function authenticate(
   role: "STUDENT" | "ADMIN",
   prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const username = formData.get("username")?.toString();
+  const username = formData.get("username")?.toString().trim();
   const password = formData.get("password")?.toString();
 
   if (!username || !password) {
     return { error: "Please enter both fields." };
   }
 
+  let redirectTo = "/";
+
   try {
-    await signIn("credentials", {
-      username,
-      password,
-      role,
-      redirect: true,
-      redirectTo: role === "ADMIN" ? "/admin/dashboard" : "/student/dashboard",
-    });
-    return { success: true };
-  } catch (error: any) {
-    if (error instanceof AuthError) {
-      return { error: "Invalid credentials. Please check and try again." };
+    if (role === "ADMIN") {
+      const admin = await db.admin.findUnique({
+        where: { email: username.toLowerCase() },
+      });
+
+      if (!admin) {
+        return { error: "Invalid email or password." };
+      }
+
+      const passwordsMatch = await bcrypt.compare(password, admin.password);
+      if (!passwordsMatch) {
+        return { error: "Invalid email or password." };
+      }
+
+      // Set cookie session
+      await setSession({
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: "ADMIN",
+      });
+      
+      redirectTo = "/admin/dashboard";
+    } else {
+      // Student login
+      const student = await db.student.findUnique({
+        where: { matricNumber: username.toUpperCase() },
+      });
+
+      if (!student) {
+        return { error: "Invalid matric number or password." };
+      }
+
+      const passwordsMatch = await bcrypt.compare(password, student.password);
+      if (!passwordsMatch) {
+        return { error: "Invalid matric number or password." };
+      }
+
+      // Set cookie session
+      await setSession({
+        id: student.matricNumber,
+        matricNumber: student.matricNumber,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        department: student.department,
+        faculty: student.faculty,
+        level: student.level,
+        session: student.session,
+        role: "STUDENT",
+      });
+
+      redirectTo = "/student/dashboard";
     }
-    // Auth.js uses redirects which throw a specific error that needs to be bubbled up
-    if (error.message && error.message.includes("NEXT_REDIRECT")) {
-      throw error;
-    }
-    // Also rethrow direct next/navigation redirects if encountered
-    if (error.digest && error.digest.includes("NEXT_REDIRECT")) {
-      throw error;
-    }
-    return { error: "Authentication failed. Please verify your credentials." };
+  } catch (error) {
+    console.error("Authentication error:", error);
+    return { error: "An unexpected database authentication error occurred." };
   }
+
+  // Perform redirect OUTSIDE the try-catch block
+  redirect(redirectTo);
 }
 
 export async function logout() {
-  await signOut({ redirectTo: "/" });
+  await deleteSession();
+  redirect("/");
 }

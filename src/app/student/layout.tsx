@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import StudentLayoutClient from "@/components/StudentLayoutClient";
 
@@ -7,16 +7,16 @@ interface LayoutProps {
 }
 
 export default async function StudentLayout({ children }: LayoutProps) {
-  const session = await auth();
+  const session = await getSession();
 
-  if (!session || session.user.role !== "STUDENT") {
+  if (!session || session.role !== "STUDENT") {
     redirect("/login/student");
   }
 
   const userForLayout = {
-    name: session.user.name || "Student",
-    matricNumber: session.user.matricNumber || "",
-    department: session.user.department || "",
+    name: session.name || "Student",
+    matricNumber: session.matricNumber || "",
+    department: session.department || "",
   };
 
   return (
