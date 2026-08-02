@@ -9,12 +9,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" },
+      },
       async authorize(credentials) {
+        // Safely parse credentials
         const parsedCredentials = z
           .object({
             username: z.string(),
             password: z.string(),
-            role: z.enum(["STUDENT", "ADMIN"]),
+            role: z.string().optional(),
           })
           .safeParse(credentials);
 
@@ -22,11 +28,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const { username, password, role } = parsedCredentials.data;
+        const { username, password } = parsedCredentials.data;
+        
+        // Auto-detect role based on input format (email vs matric number) as a robust fallback
+        let detectedRole = parsedCredentials.data.role;
+        if (!detectedRole) {
+          detectedRole = username.includes("@") ? "ADMIN" : "STUDENT";
+        }
 
-        if (role === "ADMIN") {
+        if (detectedRole === "ADMIN") {
           const admin = await db.admin.findUnique({
-            where: { email: username.toLowerCase() },
+            where: { email: username.toLowerCase().trim() },
           });
 
           if (!admin) return null;
@@ -43,7 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } else {
           // Student login
           const student = await db.student.findUnique({
-            where: { matricNumber: username.toUpperCase() },
+            where: { matricNumber: username.toUpperCase().trim() },
           });
 
           if (!student) return null;
